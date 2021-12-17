@@ -1,2 +1,5 @@
 *.mp4
 *.m3u8
+wget-log*
+*.list
+media_dl.sh
