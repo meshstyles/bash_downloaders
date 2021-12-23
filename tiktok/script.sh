@@ -25,30 +25,78 @@ get_page(){
     )
 }
 
-# mitigate link from user shares
+get_video_content(){
+# download video
+# exit if with code 1 whne the download fails
+wget "${tiktok_video_url}" \
+    --user-agent="${useragent}" \
+    --referer="https://www.tiktok.com/" \
+    -O "${user_name}-${video_id}.mp4" || exit 1
+}
+
+# resolve links from user share
 if [[ "$link" == *"vm.tiktok.com"* ]]; then
     # we ge a new "normalized" link
     get_page
     link=$(echo "$page" | pup 'a attr{href}' | sed 's/&amp;/&/g')
 fi
 
-# 
-if [[ "$link" = *"m.tiktok.com/v/"* ]]; then
+# resolve mobile site links to desktop
+if [[ "$link" == *"m.tiktok.com/v/"* ]]; then
     get_page
     link=$(echo "$page" | pup 'a attr{href}'| sed 's/&amp;/&/g')
 fi
 
-get_page
 
-# obtain parameters for download
-video_id=$(echo ${link##*video\/} | cut -d '?' -f 1)
-user_name=$(echo ${link##*\@} | cut -d '/' -f 1)
-tiktok_video_url=$(echo "$page" | pup 'meta[property="og:video:secure_url"] attr{content}' | sed 's/\&amp;/\&/g')
+# resolve link to desktop site and download
+if [[ "$link" == *"/video/"* ]]; then
+    get_page
 
-echo "$tiktok_video_url"
+    # obtain parameters for download
+    video_id=$(echo ${link##*video\/} | cut -d '?' -f 1)
+    user_name=$(echo ${link##*\@} | cut -d '/' -f 1)
+    tiktok_video_url=$(echo "$page" | pup 'meta[property="og:video:secure_url"] attr{content}' | sed 's/\&amp;/\&/g')
 
-#download video
-wget "${tiktok_video_url}" \
-    --user-agent="${useragent}" \
-    --referer="https://www.tiktok.com/" \
-    -O "${user_name}-${video_id}.mp4" || exit 1
+    if [[ "$tiktok_video_url" == "" ]]; then
+        echo "could not obtain video url"
+        exit 2
+    fi
+
+    get_video_content
+
+    # we need to exit here to have the next clause to be user profile downloads only
+    exit 0
+
+fi
+
+# after here it should not be videos any more
+# this is using user profile sites
+if [[ "$link" == *"/@"* ]]; then
+
+    echo "this is a user profile download"
+
+    get_page
+    # echo "$page" > index.html
+    
+    user_name=$(echo ${link##*\@} | cut -d '/' -f 1 | cut -d '?' -f 1)
+    username_nonconforming=$(echo "$page" | pup 'script#Person text{}' | jq -r '.name' | sed "s/[:/|]/-/g; s/ $//; s/&amp;/\&/g")
+    
+    echo "$username_nonconforming"
+    mkdir "$username_nonconforming"
+    cd "$username_nonconforming"
+
+    usercontent_list=$(echo "$page" | pup 'script#sigi-persisted-data text{}' | sed "s/window\['SIGI_STATE'\]=//g" | jq '.ItemList."user-post"')
+
+    # echo "$usercontent_list" > videolist.json
+
+    for k in  $(jq -r '.preloadList | keys | .[]' <<< "$usercontent_list"); do
+        tiktok_video_url=$( echo $usercontent_list | jq ".preloadList[$k].url" -r)
+        video_id=$( echo $usercontent_list | jq ".preloadList[$k].id" -r)
+        
+        get_video_content
+    done
+
+    cd ..
+
+fi
+
