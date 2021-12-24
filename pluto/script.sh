@@ -45,6 +45,67 @@ if [[ "$link" == *'/on-demand/'* ]]; then
         starturl="https://boot.pluto.tv/v4/start?appName=${appName}&appVersion=${appversion}&deviceVersion=${useragent_ver}&deviceModel=${deviceModel}&deviceMake=${deviceMake}&deviceType=${deviceType}&clientID=${sample_client_id}&clientModelNumber=${clientModelNumber}&episodeSlugs=${slug}&serverSideAds=${serverSideAds}&constraints=${constraints}&clientTime=${clientDate}"
     }
 
+    func_download_from_hls(){
+        
+        vod_req_url="${baseurl_hls}${vod_url}?${vod_prams}&&jwt=${jwt}&masterJWTPassthrough=${JWTPassthrough}"
+
+        master_hls=$(curl "$vod_req_url" \
+            -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
+            -H 'sec-ch-ua-mobile: ?0' \
+            -H "user-agent: ${useragent}" \
+            -H 'accept: */*' \
+            -H 'origin: https://pluto.tv' \
+            -H 'sec-fetch-site: same-site' \
+            -H 'sec-fetch-mode: cors' \
+            -H 'sec-fetch-dest: empty' \
+            -H 'referer: https://pluto.tv/' \
+            -H 'accept-language: en-US;q=0.8,en;q=0.7' \
+            --compressed )
+
+        # use this to debug
+        # echo "$master_hls" > master.m3u8
+        
+        list_of_res=$( echo "$master_hls" | grep "BANDWIDTH=" | sed 's/#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=//g' | cut -d ',' -f 1)
+        array_of_res=($list_of_res)
+        max_res=0
+        for res in "${array_of_res[@]}"
+        do
+            if [ "$res" -gt "$max_res" ]; then
+                max_res="$res"
+            fi
+        done
+
+        playlist_url=$(echo "$master_hls" | grep "$max_res/playlist")
+        baseurl_playlist=${vod_url%%master.m3u8*}
+
+        #TODO finish this
+        playlist_req_url="${baseurl_hls}${baseurl_playlist}${playlist_url}"
+
+        echo "$playlist_req_url"
+
+        playlist_hls_file="playlist_$(date +%s).m3u8"
+
+        playlist_hls=$(curl "$playlist_req_url" \
+            -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
+            -H 'sec-ch-ua-mobile: ?0' \
+            -H "user-agent: ${useragent}" \
+            -H 'sec-ch-ua-platform: "Windows"' \
+            -H 'accept: _/_' \
+            -H 'origin: https://pluto.tv' \
+            -H 'sec-fetch-site: same-site' \
+            -H 'sec-fetch-mode: cors' \
+            -H 'sec-fetch-dest: empty' \
+            -H 'referer: https://pluto.tv/' \
+            -H 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5' \
+            --compressed)
+
+        echo "$playlist_hls" | grep -v -e '/creative/\|Pluto_TV_OandO/clip' | grep -v -e '#EXT-X-DISCONTINUITY\|#EXT-X-PROGRAM-DATE-TIME' > "$playlist_hls_file"
+
+        ffmpeg -protocol_whitelist file,http,https,tcp,tls,crypto -i "$playlist_hls_file" -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 "${vod_name}.mp4"
+        
+        rm "$playlist_hls_file"
+    }
+
     page=$( curl "$link" \
     -H 'sec-ch-ua-mobile: ?0' \
     -H 'sec-ch-ua-platform: "Windows"' \
@@ -101,66 +162,9 @@ if [[ "$link" == *'/on-demand/'* ]]; then
         vod_prams=$(echo "$start" | jq -r '.stitcherParams' | sed 's/\\u0026/\&/g')
         jwt=$(echo "$start" | jq -r '.sessionToken')
 
-        vod_req_url="${baseurl_hls}${vod_url}?${vod_prams}&&jwt=${jwt}&masterJWTPassthrough=${JWTPassthrough}"
-
-        master_hls=$(curl "$vod_req_url" \
-            -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
-            -H 'sec-ch-ua-mobile: ?0' \
-            -H "user-agent: ${useragent}" \
-            -H 'accept: */*' \
-            -H 'origin: https://pluto.tv' \
-            -H 'sec-fetch-site: same-site' \
-            -H 'sec-fetch-mode: cors' \
-            -H 'sec-fetch-dest: empty' \
-            -H 'referer: https://pluto.tv/' \
-            -H 'accept-language: en-US;q=0.8,en;q=0.7' \
-            --compressed )
-
-        # use this to debug
-        # echo "$master_hls" > master.m3u8
-        
-        list_of_res=$( echo "$master_hls" | grep "BANDWIDTH=" | sed 's/#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=//g' | cut -d ',' -f 1)
-        array_of_res=($list_of_res)
-        max_res=0
-        for res in "${array_of_res[@]}"
-        do
-
-            if [ "$res" -gt "$max_res" ]; then
-                max_res="$res"
-            fi
-        done
-
-        playlist_url=$(echo "$master_hls" | grep "$max_res/playlist")
-        baseurl_playlist=${vod_url%%master.m3u8*}
-
-        #TODO finish this
-        playlist_req_url="${baseurl_hls}${baseurl_playlist}${playlist_url}"
-
-        echo "$playlist_req_url"
-
-        playlist_hls_file="playlist_$(date +%s).m3u8"
-
-        playlist_hls=$(curl "$playlist_req_url" \
-            -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
-            -H 'sec-ch-ua-mobile: ?0' \
-            -H "user-agent: ${useragent}" \
-            -H 'sec-ch-ua-platform: "Windows"' \
-            -H 'accept: _/_' \
-            -H 'origin: https://pluto.tv' \
-            -H 'sec-fetch-site: same-site' \
-            -H 'sec-fetch-mode: cors' \
-            -H 'sec-fetch-dest: empty' \
-            -H 'referer: https://pluto.tv/' \
-            -H 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5' \
-            --compressed)
-
-        echo "$playlist_hls" | grep -v -e '/creative/\|Pluto_TV_OandO/clip' | grep -v -e '#EXT-X-DISCONTINUITY\|#EXT-X-PROGRAM-DATE-TIME' > "$playlist_hls_file"
-
-        ffmpeg -protocol_whitelist file,http,https,tcp,tls,crypto -i "$playlist_hls_file" -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 "${vod_name}.mp4"
-        
-        rm "$playlist_hls_file"
-
+        func_download_from_hls
         exit 0;
+
     else
         echo "this kind of on-demand content is currently not supported."
         echo "if you know how it works; please contribute -> https://github.com/meshstyles/bash_downloaders"
