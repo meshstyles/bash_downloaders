@@ -47,4 +47,3 @@ please add dependencies here as you go
 ## upcoming
 
 -   a better readme
--   pluto.tv support (preliminary)

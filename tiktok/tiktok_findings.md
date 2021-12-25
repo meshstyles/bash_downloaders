@@ -60,3 +60,10 @@ curl 'https://www.tiktok.com/@user/video/123456789123456?lang=en-US&is_copy_url=
  -H 'sec-fetch-dest: document' \
  -H 'accept-language: en-US;q=0.8,en;q=0.7' \
  --compressed
+
+
+## user profiles
+
+this will not be documented extensively since there seems to be a lot of changes.
+currently there are 30 video urls embedded in an script element in the page source.
+this will be analysed and the max 30 latest videos will be pulled into a folder with the nickname (this does not need to be the uniquename(tiktok at)).
