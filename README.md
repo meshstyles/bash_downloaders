@@ -10,6 +10,10 @@ these are several downloaders written in bash
 4. make it runnable for example with `chmod 700 media_dl.sh`
 5. run it with `./media_dl.sh "link_to_supported_website"`
 
+For more infos consult the readme of each module if there is anything specific to note  
+- [pluto](./pluto/readme.md)
+- [tiktok](./tiktok/readme.md)
+
 ## how to build
 
 run `./build.sh` in the main directory of the repository
@@ -18,8 +22,8 @@ run `./build.sh` in the main directory of the repository
 
 please add dependencies here as you go
 
--   pup
--   jq
+-   [pup](https://github.com/ericchiang/pup)
+-   [jq](https://github.com/stedolan/jq)
 -   curl
 -   wget
 -   bash
@@ -46,4 +50,5 @@ please add dependencies here as you go
 
 ## upcoming
 
--   a better readme
+- a better readme
+- debian setup script (maybe)
