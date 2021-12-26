@@ -9,7 +9,7 @@ useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, 
 sample_client_id='8d97a90b-b33f-41ba-1337-de64186dd3db'
 appversion='5.106.0-f3e2ac48d1dbe8189dc784777108b725b4be6be2'
 
-if [[ "$link" == *'/on-demand/'* ]]; then 
+if [[ "$link" != *'/live-tv/'* ]]; then 
     
     func_setup(){
         # safari needs to be below chrome in order to no trigger the if else if ..
