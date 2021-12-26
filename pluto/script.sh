@@ -5,6 +5,10 @@ useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 #link "pluto.tv/"
 #cutoff
+
+sample_client_id='8d97a90b-b33f-41ba-1337-de64186dd3db'
+appversion='5.106.0-f3e2ac48d1dbe8189dc784777108b725b4be6be2'
+
 if [[ "$link" == *'/on-demand/'* ]]; then 
     
     func_setup(){
@@ -28,21 +32,54 @@ if [[ "$link" == *'/on-demand/'* ]]; then
             deviceMake="chrome"
         fi
 
+        # obtaining page data like the appversion needed for start
+        page=$( curl "$link" \
+            -H 'sec-ch-ua-mobile: ?0' \
+            -H 'sec-ch-ua-platform: "Windows"' \
+            -H 'Upgrade-Insecure-Requests: 1' \
+            -H "User-Agent: $useragent")
+        
+        appversion=$(echo "$page" | pup 'meta[name="appVersion"] attr{content}')
+        echo "appversion : $appversion"
+
         useragent_ver="${useragent_ver%% *}"
         appName="web"
         deviceModel="web"
         deviceType="web"
         clientModelNumber="1.0.0"
+        # there is no diffrence when false or true the server returns a stream with ads
         serverSideAds="true"
         constraints=""
 
-        sample_client_id="8d97a90b-b33f-41ba-1337-de64186dd3db"
+        used_client_id="$sample_client_id"
 
         clientDate="$(date +%Y)-$(date +%m)-$(date +%d)T$(date +%H):$(date +%M):$(date +%S).$(date +%S)1T"
 
         # this is bad style but makes it easier to compare to
         # a real url in an editor window
-        starturl="https://boot.pluto.tv/v4/start?appName=${appName}&appVersion=${appversion}&deviceVersion=${useragent_ver}&deviceModel=${deviceModel}&deviceMake=${deviceMake}&deviceType=${deviceType}&clientID=${sample_client_id}&clientModelNumber=${clientModelNumber}&episodeSlugs=${slug}&serverSideAds=${serverSideAds}&constraints=${constraints}&clientTime=${clientDate}"
+        starturl="https://boot.pluto.tv/v4/start?appName=${appName}&appVersion=${appversion}&deviceVersion=${useragent_ver}&deviceModel=${deviceModel}&deviceMake=${deviceMake}&deviceType=${deviceType}&clientID=${used_client_id}&clientModelNumber=${clientModelNumber}&episodeSlugs=${slug}&serverSideAds=${serverSideAds}&constraints=${constraints}&clientTime=${clientDate}"
+
+        echo $starturl
+
+        start=$(curl "$starturl" \
+            -H 'authority: boot.pluto.tv' \
+            -H 'sec-ch-ua-mobile: ?0' \
+            -H "user-agent: ${useragent}" \
+            -H 'accept: */*' \
+            -H 'origin: https://pluto.tv' \
+            -H 'sec-fetch-site: same-site' \
+            -H 'sec-fetch-mode: cors' \
+            -H 'sec-fetch-dest: empty' \
+            -H 'referer: https://pluto.tv/' \
+            -H 'accept-language: en-US;q=0.8,en;q=0.7' \
+            --compressed )
+
+        # these are variables used to obtain master.m3u8 or playlist.m3u8
+        baseurl_hls=$(echo "$start" | jq -r '.servers.stitcher')
+        JWTPassthrough="true"
+        jwt=$(echo "$start" | jq -r '.sessionToken')
+        vod_prams=$(echo "$start" | jq -r '.stitcherParams' | sed 's/\\u0026/\&/g')
+
     }
 
     func_download_from_hls(){
@@ -106,64 +143,179 @@ if [[ "$link" == *'/on-demand/'* ]]; then
         rm "$playlist_hls_file"
     }
 
-    page=$( curl "$link" \
-    -H 'sec-ch-ua-mobile: ?0' \
-    -H 'sec-ch-ua-platform: "Windows"' \
-    -H 'Upgrade-Insecure-Requests: 1' \
-    -H "User-Agent: $useragent")
-    
-    appversion=$(echo "$page" | pup 'meta[name="appVersion"] attr{content}')
-
-    # get the variables for next request
-
-    echo "appversion : $appversion"
-    # appversion="5.106.0-f3e2ac48d1dbe8189dc784777108b725b4be6be2"
-    # echo "appversion : $appversion"
 
     if [[ "$link" == *'/series/'* ]]; then
         echo "it's a series"
         echo "series are currently not supported. But it's being worked on "
         echo "if you know how it works; please contribute -> https://github.com/meshstyles/bash_downloaders"
-        exit 1
 
         slug="${link##*\/series\/}"
         slug="${slug%%\/*}"
-        func_setup
+        slug="${slug%%\?*}"
+
+        season_number="${link##*\/season\/}"
+        season_number="${season_number%%\/*}"
+        season_number="${season_number%%\?*}"
+
+        if [[ "$season_number" =~ ^[0-9]+$ ]]; then
+            echo "season nummber : $season_number"
+        else
+            season_number=""
+        fi
+
+        if [[ "$season_number" == "" ]]; then
+            echo "download it all?"
+            echo "this would download every episode"
+            echo "type \"yes\" if you want to attempt to download eveything"
+            
+            read user_download_all_seasons
+
+            if [[ "$user_download_all_seasons" == "yes" ]]; then
+
+            func_setup
+            # make a folder for the series to keep order
+            mkdir "$slug"
+            cd "$slug"
+
+            for season_index in $(jq -r '.VOD[0].seasons | keys | .[]' <<< "$start"); do
+
+                # make folder for season so content is sorted
+                mkdir "Season-$(( season_index + 1 ))"
+                cd "Season-$(( season_index + 1 ))"
+
+                for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
+                    vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
+                    vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
+                    season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
+                    episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
+                    vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+
+                    func_download_from_hls
+
+                    # debug code to not download everything
+                    # please remember to comment func_setup while developing
+                    echo "====================================="
+                    echo $vod_name
+                    echo $vod_url
+                    echo "====================================="
+
+
+                    # this should run every or every other episode to
+                    # always update the jwt since it's only good for 6hrs and downloads can take time
+                    
+                    func_setup
+
+                done
+            done
+
+            fi
+
+            exit 0
+        fi
+
+        episode_name="${link##*\/episode\/}"
+        episode_name="${episode_name%%\/*}"
+        episode_name="${episode_name%%\?*}"
+
+        # if therer is no /episode/ in the link we have a season link
+        echo "episode name : $episode_name"
+        if [[ "$link" != *"/episode/"* ]]; then
+            episode_name=""
+        fi
+
+        if [[ "$episode_name" == "" ]]; then
+            echo "download it all?"
+            echo "this would download every episode of season $season_number"
+            echo "type \"yes\" if you want to attempt to download this season"
+            
+            read user_download_all_seasons
+
+            if [[ "$user_download_all_seasons" == "yes" ]]; then
+                
+                season_index="$(( season_number - 1 ))"
+                func_setup
+
+                # make a folder for the series to keep order
+                mkdir "$slug"
+                cd "$slug"
+
+                # make folder for season so content is sorted
+                # make folder for season so content is sorted
+                mkdir "Season-${season_number}"
+                cd "Season-${season_number}"
+
+                for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
+                    vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
+                    vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
+                    season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
+                    episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
+                    vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+
+                    func_download_from_hls
+
+                    # debug code to not download everything
+                    # please remember to comment func_setup while developing
+                    echo "====================================="
+                    echo $vod_name
+                    echo $vod_url
+                    echo "====================================="
+
+                    # this should run every or every other episode to
+                    # always update the jwt since it's only good for 6hrs and downloads can take time
+                    
+                    func_setup
+
+                done
+            fi
+
+        else
+        
+            # downloading a single episode
+            func_setup
+
+            season_index="$(( season_number - 1 ))"
+
+            episode_index=$(echo "$episode_name" | rev | cut -d '-' -f 1 | rev)
+            episode_index="$(( episode_index - 1 ))"
+
+            vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
+            vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
+            season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
+            episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
+            vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+
+            # debug code to not download everything
+            # please remember to comment func_setup while developing
+            echo "====================================="
+            echo $vod_name
+            echo $vod_url
+            echo "====================================="
+
+            func_download_from_hls
+
+        fi
+
+        exit 0
 
     elif [[ "$link" == *'/movies/'* ]]; then
         echo "it's a movie"
         
         slug="${link##*\/movies\/}"
         slug="${slug%%\/*}"
+        slug="${slug%%\?*}"
 
+        # func_setup now also obtains the curl of start api and setup of common variables 
         func_setup
-
-        start=$(curl "$starturl" \
-            -H 'authority: boot.pluto.tv' \
-            -H 'sec-ch-ua-mobile: ?0' \
-            -H "user-agent: ${useragent}" \
-            -H 'accept: */*' \
-            -H 'origin: https://pluto.tv' \
-            -H 'sec-fetch-site: same-site' \
-            -H 'sec-fetch-mode: cors' \
-            -H 'sec-fetch-dest: empty' \
-            -H 'referer: https://pluto.tv/' \
-            -H 'accept-language: en-US;q=0.8,en;q=0.7' \
-            --compressed )
-
+        
         # use this to debug
         # echo "$start" > start.json
 
-        baseurl_hls="https://service-stitcher-ipv4.clusters.pluto.tv/v2"
-        JWTPassthrough="true"
         # ATTENTION: this is a movie so this will always be the first stream w/o season
         vod_url=$(echo "$start" | jq -r '.VOD[0].stitched.path')
         vod_name=$(echo "$start" | jq -r '.VOD[0].name' | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
-        vod_prams=$(echo "$start" | jq -r '.stitcherParams' | sed 's/\\u0026/\&/g')
-        jwt=$(echo "$start" | jq -r '.sessionToken')
 
         func_download_from_hls
-        exit 0;
+        exit 0
 
     else
         echo "this kind of on-demand content is currently not supported."
