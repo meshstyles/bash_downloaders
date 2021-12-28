@@ -172,41 +172,38 @@ if [[ "$link" != *'/live-tv/'* ]]; then
 
             if [[ "$user_download_all_seasons" == "yes" ]]; then
 
-            func_setup
-            # make a folder for the series to keep order
-            mkdir "$slug"
-            cd "$slug"
+                func_setup
+                # make a folder for the series to keep order
+                mkdir "$slug"
+                cd "$slug"
 
-            for season_index in $(jq -r '.VOD[0].seasons | keys | .[]' <<< "$start"); do
+                for season_index in $(jq -r '.VOD[0].seasons | keys | .[]' <<< "$start"); do
 
-                # make folder for season so content is sorted
-                mkdir "Season-$(( season_index + 1 ))"
-                cd "Season-$(( season_index + 1 ))"
+                    # make folder for season so content is sorted
+                    mkdir "Season-$(( season_index + 1 ))"
+                    cd "Season-$(( season_index + 1 ))"
 
-                for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
-                    vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
-                    vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
-                    season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
-                    episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
-                    vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+                    for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
+                        vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
+                        vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
+                        season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
+                        episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
+                        vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
-                    func_download_from_hls
+                        echo "====================================="
+                        echo $vod_name
+                        echo $vod_url
+                        echo "====================================="
 
-                    # debug code to not download everything
-                    # please remember to comment func_setup while developing
-                    echo "====================================="
-                    echo $vod_name
-                    echo $vod_url
-                    echo "====================================="
+                        # this should run every or every other episode to
+                        # please remember to comment func_setup while developing
+                        # always update the jwt since it's only good for 6hrs and downloads can take time
+                        
+                        func_download_from_hls
+                        func_setup
 
-
-                    # this should run every or every other episode to
-                    # always update the jwt since it's only good for 6hrs and downloads can take time
-                    
-                    func_setup
-
+                    done
                 done
-            done
 
             fi
 
@@ -218,9 +215,10 @@ if [[ "$link" != *'/live-tv/'* ]]; then
         episode_name="${episode_name%%\?*}"
 
         # if therer is no /episode/ in the link we have a season link
-        echo "episode name : $episode_name"
         if [[ "$link" != *"/episode/"* ]]; then
             episode_name=""
+        else
+            echo "episode name : $episode_name"
         fi
 
         if [[ "$episode_name" == "" ]]; then
@@ -240,7 +238,6 @@ if [[ "$link" != *'/live-tv/'* ]]; then
                 cd "$slug"
 
                 # make folder for season so content is sorted
-                # make folder for season so content is sorted
                 mkdir "Season-${season_number}"
                 cd "Season-${season_number}"
 
@@ -251,9 +248,6 @@ if [[ "$link" != *'/live-tv/'* ]]; then
                     episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
                     vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
-                    func_download_from_hls
-
-                    # debug code to not download everything
                     # please remember to comment func_setup while developing
                     echo "====================================="
                     echo $vod_name
@@ -262,6 +256,7 @@ if [[ "$link" != *'/live-tv/'* ]]; then
 
                     # this should run every or every other episode to
                     # always update the jwt since it's only good for 6hrs and downloads can take time
+                    func_download_from_hls
                     
                     func_setup
 
@@ -271,6 +266,7 @@ if [[ "$link" != *'/live-tv/'* ]]; then
         else
         
             # downloading a single episode
+            # please remember to comment func_setup while developing
             func_setup
 
             season_index="$(( season_number - 1 ))"
@@ -284,8 +280,6 @@ if [[ "$link" != *'/live-tv/'* ]]; then
             episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
             vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
-            # debug code to not download everything
-            # please remember to comment func_setup while developing
             echo "====================================="
             echo $vod_name
             echo $vod_url
