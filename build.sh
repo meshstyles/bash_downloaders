@@ -37,3 +37,5 @@ do
 done <"$module_list"
 
 rm module.list
+
+dos2unix media_dl.sh
