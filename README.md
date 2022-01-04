@@ -2,6 +2,13 @@
 
 these are several downloaders written in bash
 
+## supported pages
+- archive.org
+- netzkino.de
+- pluto.tv
+- tiktok
+- twitter
+
 ## how to use this
 
 1. take a look at the releases tab
