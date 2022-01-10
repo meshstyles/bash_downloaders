@@ -6,21 +6,37 @@ useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, 
 #link "twitter.com/"
 #cutoff
 
-#this token doesn't change that often in fact this one has been valid for quite some time
-twitter_default_anon_token="AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
-# link=${link%%\?*}
+twitter_default_anon_token="AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36 Edg/95.0.1020.40"
+# this the old token so well they just used it diffrently?
+guest_api_token="AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 tweetid="${link#*status/}"
 tweetid="${tweetid%\?*}"
 echo $tweetid
 echo $link
 
 #get a guest
-gtg=$(curl "${link}" \
+gtg=$(curl 'https://api.twitter.com/1.1/guest/activate.json' \
+  -X 'POST' \
+  -H 'authority: api.twitter.com' \
+  -H 'content-length: 0' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"' \
+  -H 'x-twitter-client-language: de' \
+  -H 'x-csrf-token: cafb76a2227be2c0ae3dc78d7e0ce7ab' \
   -H 'sec-ch-ua-mobile: ?0' \
+  -H "authorization: Bearer ${guest_api_token}" \
+  -H 'content-type: application/x-www-form-urlencoded' \
+  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36' \
+  -H 'x-twitter-active-user: yes' \
   -H 'sec-ch-ua-platform: "Windows"' \
-  -H 'Upgrade-Insecure-Requests: 1' \
-  -H "User-Agent: ${useragent}" \
-  --compressed | grep "decodeURIComponent(\"gt=" | cut -d ';' -f 2 | cut -d '=' -f 4 )
+  -H 'accept: */*' \
+  -H 'origin: https://twitter.com' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'referer: https://twitter.com/' \
+  -H 'accept-language: de-DE,de;q=0.9' \
+  --compressed | jq -r '.guest_token') 
 
 api_res=$(curl "https://twitter.com/i/api/graphql/NtPJS7yopZTC4lPvb_kVEA/TweetDetail?variables=%7B%22focalTweetId%22%3A%22${tweetid}%22%2C%22with_rux_injections%22%3Afalse%2C%22includePromotedContent%22%3Atrue%2C%22withCommunity%22%3Atrue%2C%22withQuickPromoteEligibilityTweetFields%22%3Afalse%2C%22withTweetQuoteCount%22%3Atrue%2C%22withBirdwatchNotes%22%3Afalse%2C%22withSuperFollowsUserFields%22%3Atrue%2C%22withUserResults%22%3Atrue%2C%22withNftAvatar%22%3Afalse%2C%22withBirdwatchPivots%22%3Afalse%2C%22withReactionsMetadata%22%3Afalse%2C%22withReactionsPerspective%22%3Afalse%2C%22withSuperFollowsTweetFields%22%3Atrue%2C%22withVoice%22%3Atrue%7D" \
   -H 'authority: twitter.com' \
