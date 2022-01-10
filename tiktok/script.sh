@@ -55,6 +55,8 @@ if [[ "$link" == *"/video/"* ]]; then
     # obtain parameters for download
     video_id=$(echo ${link##*video\/} | cut -d '?' -f 1)
     user_name=$(echo ${link##*\@} | cut -d '/' -f 1)
+    # this works since the relaxed json devides member variables by ','
+    # than we can just filter for video urls and we'll select downloadAddr and fix it up
     tiktok_video_url=$(echo "$page" | pup 'script#sigi-persisted-data text{}' |  sed 's/,/,\n/g'  | grep "webapp.tiktok.com" | grep 'downloadAddr' | cut -d '"' -f 4 | sed 's/\\u002F/\//g')
 
     if [[ "$tiktok_video_url" == "" ]]; then
