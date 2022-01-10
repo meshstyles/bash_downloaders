@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>bash_downloaders home ed.</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    </head>
+    <body>
+        <div>
+            <h1>light weight web-frontend for bash_downloaders</h1>
+
+            <table style="width: 100%">
+                <tr>
+                    <th>
+                        <textarea
+                            id="input_uri"
+                            placeholder="link goes here"
+			                style="width: 100%;"
+                            autofocus
+                        ></textarea>
+                    </th>
+                </tr>
+                <tr>
+                    <td>
+                        <button
+                            id="submit"
+			                style="width: 100%;"
+                            onclick="sendRequest()"
+                        >
+                            download video
+                        </button>
+
+                        <script>
+                            function download_request(requested_url) {
+                                let request_uri = `./media_dl_srv.sh?link=${requested_url}`;
+                                let xmlHttp = new XMLHttpRequest();
+                                xmlHttp.open('GET', request_uri);
+                                xmlHttp.send(null);
+                            }
+
+                            function sendRequest() {
+                                let i = 100;
+                                var download_uri =
+                                    document.getElementById('input_uri').value;
+
+                                download_uri = download_uri.split('\n');
+
+                                if (Array.isArray(download_uri)) {
+                                    // this needs to be min 100ms
+                                    let randomNumber =
+                                        Math.floor(Math.random() * 100) + i;
+                                    i + 100;
+                                    download_uri.forEach((uri) => {
+                                        setTimeout(function () {
+                                            alert(uri);
+                                            download_request(uri);
+                                        }, randomNumber);
+                                    });
+                                } else {
+                                    download_request(download_uri);
+                                }
+                            }
+                        </script>
+                    </td>
+                    <tr>
+                        <td>
+                            <a href="./activelist">activity list</a>
+                            <a href="./downloads/">downloads</a>
+                        </td>
+                    </tr>
+                </tr>
+            </table>
+        </div>
+    </body>
+</html>
