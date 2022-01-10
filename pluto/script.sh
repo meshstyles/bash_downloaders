@@ -53,7 +53,8 @@ if [[ "$link" != *'/live-tv/'* ]]; then
 
         used_client_id="$sample_client_id"
 
-        clientDate="$(date +%Y)-$(date +%m)-$(date +%d)T$(date +%H):$(date +%M):$(date +%S).$(date +%S)1T"
+        # clientDate="$(date +%Y)-$(date +%m)-$(date +%d)T$(date +%H):$(date +%M):$(date +%S).$(date +%S)1T"
+        clientDate="$(date +%Y-%m-%dT%H:%M:%S.%S)1T"
 
         # this is bad style but makes it easier to compare to
         # a real url in an editor window
