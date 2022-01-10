@@ -55,7 +55,7 @@ if [[ "$link" == *"/video/"* ]]; then
     # obtain parameters for download
     video_id=$(echo ${link##*video\/} | cut -d '?' -f 1)
     user_name=$(echo ${link##*\@} | cut -d '/' -f 1)
-    tiktok_video_url=$(echo "$page" | pup 'meta[property="og:video:secure_url"] attr{content}' | sed 's/\&amp;/\&/g')
+    tiktok_video_url=$(echo "$page" | pup 'script#sigi-persisted-data text{}' |  sed 's/,/,\n/g'  | grep "webapp.tiktok.com" | grep 'downloadAddr' | cut -d '"' -f 4 | sed 's/\\u002F/\//g')
 
     if [[ "$tiktok_video_url" == "" ]]; then
         echo "could not obtain video url"
@@ -99,4 +99,3 @@ if [[ "$link" == *"/@"* ]]; then
     cd ..
 
 fi
-
