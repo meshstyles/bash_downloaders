@@ -147,8 +147,6 @@ if [[ "$link" != *'/live-tv/'* ]]; then
 
     if [[ "$link" == *'/series/'* ]]; then
         echo "it's a series"
-        echo "series are currently not supported. But it's being worked on "
-        echo "if you know how it works; please contribute -> https://github.com/meshstyles/bash_downloaders"
 
         slug="${link##*\/series\/}"
         slug="${slug%%\/*}"
