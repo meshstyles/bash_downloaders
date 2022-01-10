@@ -1,0 +1,7 @@
+AddHandler cgi-script .sh
+Options +ExecCGI
+
+<FilesMatch "\.(htaccess|htpasswd|sh|xml|json)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
