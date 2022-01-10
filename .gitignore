@@ -4,3 +4,5 @@ wget-log*
 *.list
 media_dl.sh
 media_dl_srv.sh
+intranet.tar
+0releases/

@@ -60,7 +60,7 @@ activivelist="\${app_dir}/activelist"
 echo "\$link" >> "\$activivelist"
 
 cd "\$app_dir/downloads"
-tmpfile="/tmp/$(date +%s)tempfile.active"
+tmpfile="/tmp/\$(date +%s)tempfile.active"
 
 EOM
 
@@ -77,3 +77,12 @@ echo "grep -v \"\$link\" \"\$activivelist\" > \"\$tmpfile\" ; mv \"\$tmpfile\" \
 
 dos2unix media_dl.sh
 dos2unix 0web/media_dl_srv.sh
+
+cd 0web
+chmod 755 media_dl_srv.sh
+tar -cvf ../intranet.tar activelist .htaccess downloads/ index.html media_dl_srv.sh
+cd ..
+
+mkdir 0releases
+mv intranet.tar 0releases/
+mv media_dl.sh 0releases/

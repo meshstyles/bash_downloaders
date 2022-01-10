@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>bash_downloaders home intranet ed.</title>
+        <title>bash_downloaders home ed.</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     </head>
     <body>
@@ -34,16 +34,16 @@
                             function download_request(requested_url) {
                                 let request_uri = `./media_dl_srv.sh?link=${requested_url}`;
                                 let xmlHttp = new XMLHttpRequest();
-                                xmlHttp.open("GET", request_uri);
+                                xmlHttp.open('GET', request_uri);
                                 xmlHttp.send(null);
                             }
 
                             function sendRequest() {
                                 let i = 100;
                                 var download_uri =
-                                    document.getElementById("input_uri").value;
+                                    document.getElementById('input_uri').value;
 
-                                download_uri = download_uri.split("\n");
+                                download_uri = download_uri.split('\n');
 
                                 if (Array.isArray(download_uri)) {
                                     // this needs to be min 100ms
