@@ -92,7 +92,7 @@ func_setup(){
         -H 'referer: https://pluto.tv/' \
         -H 'accept-language: en-US;q=0.8,en;q=0.7' \
         --compressed )
-    echo $start > start.json
+    # echo $start > start.json
     # these are variables used to obtain master.m3u8 or playlist.m3u8
     baseurl_hls=$(echo "$start" | jq -r '.servers.stitcher')
     JWTPassthrough="true"
