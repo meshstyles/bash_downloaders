@@ -188,6 +188,18 @@ func_download_from_hls(){
     fi
 }
 
+if [[ "$link" == *'/search/details/'* ]]; then 
+    
+    if [[ "$link" == *'/channels/pluto-tv-'* ]]; then 
+        link=$(echo "$link" | sed 's/search\/details\/channels/live-tv/')
+        echo "$link"
+    else
+        link=$(echo "$link" | sed 's/search/on-demand/')
+        echo "$link"
+    fi
+    
+fi
+
 if [[ "$link" == *'/on-demand/'* ]]; then 
     echo "this is on-demand content"
     # this is the way on demand content declared
