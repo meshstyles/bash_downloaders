@@ -3,11 +3,12 @@
 these are several downloaders written in bash
 
 ## supported pages
-- archive.org
-- netzkino.de
-- pluto.tv
-- tiktok
-- twitter
+
+-   archive.org
+-   netzkino.de
+-   pluto.tv
+-   tiktok
+-   twitter
 
 ## how to use this
 
@@ -17,9 +18,10 @@ these are several downloaders written in bash
 4. make it runnable for example with `chmod 700 media_dl.sh`
 5. run it with `./media_dl.sh "link_to_supported_website"`
 
-For more infos consult the readme of each module if there is anything specific to note  
-- [pluto](./pluto/readme.md)
-- [tiktok](./tiktok/readme.md)
+For more infos consult the readme of each module if there is anything specific to note
+
+-   [pluto](./pluto/readme.md)
+-   [tiktok](./tiktok/readme.md)
 
 ## how to build
 
@@ -58,7 +60,12 @@ please add dependencies here as you go
     -   after `#cutoff` should the fully working and fully self contained part which only rely on `link` and `useragent`
 -   create a new branch and put in a pull request if you want to contribute
 
+### dev dependencies
+
+-   the script is for bash so you need bash and the default tools
+-   dos2unix since some files might be formatted the wrong way
+
 ## upcoming
 
-- a better readme
-- debian setup script (maybe)
+-   a better readme
+-   debian setup script (maybe)

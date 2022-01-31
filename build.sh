@@ -80,7 +80,9 @@ dos2unix 0web/media_dl_srv.sh
 
 mkdir 0releases
 
+# 0web should already exist
 cd 0web
+mkdir downloads/
 chmod 755 media_dl_srv.sh
 tar -cvf ../intranet.tar activelist .htaccess downloads/ index.html media_dl_srv.sh
 cp media_dl_srv.sh ../0releases/
