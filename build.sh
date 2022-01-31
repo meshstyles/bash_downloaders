@@ -78,11 +78,11 @@ echo "grep -v \"\$link\" \"\$activivelist\" > \"\$tmpfile\" ; mv \"\$tmpfile\" \
 dos2unix media_dl.sh
 dos2unix 0web/media_dl_srv.sh
 
-mkdir 0releases
+[ -f ./0releases/ ] || mkdir 0releases
 
 # 0web should already exist
 cd 0web
-mkdir downloads/
+[ -f ./downloads/ ] || mkdir downloads
 chmod 755 media_dl_srv.sh
 tar -cvf ../intranet.tar activelist .htaccess downloads/ index.html media_dl_srv.sh
 cp media_dl_srv.sh ../0releases/
