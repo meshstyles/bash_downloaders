@@ -70,7 +70,7 @@ search_tweet_id="tweet-$tweetid"
 for i in  $(echo "$search_obj" | jq -r '.entries | keys | .[]'); do
     cur_tweet_id=$(echo "$search_obj" | jq -r ".entries[$i].entryId")
     echo "searched: $search_tweet_id - current: $cur_tweet_id"
-    if [[ "$search_tweet_id" == "$cur_tweet_id" ]] ; then
+    if [[ "$cur_tweet_id" == *"$tweetid"* ]] ; then
         #saving tweet content 
         echo "$search_obj" | jq ".entries[$i]" > "$tweetid.json"
         searched_tweet=$(echo "$search_obj" | jq ".entries[$i].content.itemContent.tweet_results.result.legacy.extended_entities")
