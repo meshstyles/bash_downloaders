@@ -5,6 +5,7 @@ these are several downloaders written in bash
 ## supported pages
 
 -   archive.org
+-   gofile.io
 -   netzkino.de
 -   pluto.tv
 -   tiktok
