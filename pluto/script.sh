@@ -12,7 +12,7 @@ appversion='5.106.0-f3e2ac48d1dbe8189dc784777108b725b4be6be2'
 func_alternative_name(){
     # this solves issues with naming
     echo "waiting for name api"
-    sleep 1
+    sleep 2
 
     alternative_name=$(curl 'https://service-stitcher-ipv4.clusters.pluto.tv/v2/session.json' \
     -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
@@ -204,6 +204,18 @@ if [[ "$link" == *'/on-demand/'* ]]; then
     echo "this is on-demand content"
     # this is the way on demand content declared
     stream_type="episodeSlugs"
+
+    # for sake of simplicity check first if the item is available
+    slug=$(echo "${link##*\/on-demand\/}" | cut -d '/' -f 2)
+    func_setup
+    extracted_slug=$(echo "$start" | jq -r '.VOD[0].slug')
+
+    if [[ ${extracted_slug} != ${slug} ]]; then
+        echo "${extracted_slug} ${slug}"
+        echo "this series might not be available"
+        echo "the slug from the url does not match the recieved video feed"
+        exit 2
+    fi
 
     if [[ "$link" == *'/series/'* ]]; then
         echo "it's a series"
@@ -438,6 +450,14 @@ elif [[ "$link" == *'/live-tv/'* ]]; then
     slug="${slug%%\?*}"
 
     func_setup
+
+    extracted_slug=$(echo "$start" | jq -r '.VOD[0].slug')
+    if [[ ${extracted_slug} != ${slug} ]]; then
+        echo "${extracted_slug} ${slug}"
+        echo "this series might not be available"
+        echo "the slug from the url does not match the recieved video feed"
+        exit 2
+    fi
 
     vod_url=$(echo "$start" | jq -r '.EPG[0].stitched.path')
 
