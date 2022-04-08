@@ -9,30 +9,6 @@ useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, 
 sample_client_id="8d97a90b-b33f-41ba-$(date +%M%S)-de64186dd3db"
 appversion='5.106.0-f3e2ac48d1dbe8189dc784777108b725b4be6be2'
 
-func_alternative_name(){
-    # this solves issues with naming
-    echo "waiting for name api"
-    sleep 2
-
-    alternative_name=$(curl 'https://service-stitcher-ipv4.clusters.pluto.tv/v2/session.json' \
-    -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
-    -H "authorization: Bearer ${jwt}" \
-    -H 'sec-ch-ua-mobile: ?0' \
-    -H "user-agent: ${useragent}" \
-    -H 'sec-ch-ua-platform: "Windows"' \
-    -H 'accept: */*' \
-    -H 'origin: https://pluto.tv' \
-    -H 'sec-fetch-site: same-site' \
-    -H 'sec-fetch-mode: cors' \
-    -H 'sec-fetch-dest: empty' \
-    -H 'referer: https://pluto.tv/' \
-    -H 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5' \
-    --compressed | jq -r '.clips[0].name') 
-
-    alternative_name=$(echo "$alternative_name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
-    echo "using alternative name supplied by website: $alternative_name"
-}
-
 func_setup(){
 
     # safari needs to be below chrome in order to no trigger the if else if ..
@@ -140,29 +116,19 @@ func_download_from_hls(){
 
     if [[ "$link" == *'/live-tv/'* ]]; then
         ffmpeg -i "${playlist_req_url}" \
-        -headers 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
-        -headers 'sec-ch-ua-mobile: ?0' \
-        -headers "user-agent: ${useragent}" \
-        -headers 'sec-ch-ua-platform: "Windows"' \
-        -headers 'accept: _/_' \
-        -headers 'origin: https://pluto.tv' \
-        -headers 'sec-fetch-site: same-site' \
-        -headers 'sec-fetch-mode: cors' \
-        -headers 'sec-fetch-dest: empty' \
-        -headers 'referer: https://pluto.tv/' \
-        -headers 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5' \
-        -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 "rec-${slug}-$(date +%s).mp4"
+            -headers 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
+            -headers 'sec-ch-ua-mobile: ?0' \
+            -headers "user-agent: ${useragent}" \
+            -headers 'sec-ch-ua-platform: "Windows"' \
+            -headers 'accept: _/_' \
+            -headers 'origin: https://pluto.tv' \
+            -headers 'sec-fetch-site: same-site' \
+            -headers 'sec-fetch-mode: cors' \
+            -headers 'sec-fetch-dest: empty' \
+            -headers 'referer: https://pluto.tv/' \
+            -headers 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5' \
+            -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 "rec-${slug}-$(date +%s).mp4"
     else
-        # using alternative naming for seriess if available
-        # this needs to be done here since the hls needs to be obtained first
-        if [[  "$link" == *'/series/'* ]]; then 
-            # obtain alternative episode name
-            func_alternative_name
-            # if we end in ) then there was a result otherwise fall back
-            if [[ "$alternative_name" == *')' ]]; then
-                vod_name="$alternative_name"
-            fi
-        fi
         # we have on demand content so we can download playlist and than use ffmpeg
         playlist_hls_file="playlist_$(date +%s).m3u8"
         playlist_hls=$(curl "$playlist_req_url" \
@@ -220,6 +186,8 @@ if [[ "$link" == *'/on-demand/'* ]]; then
     if [[ "$link" == *'/series/'* ]]; then
         echo "it's a series"
 
+        fullseriesname=$(echo "$start" | jq -r '.VOD[0].name')
+
         slug="${link##*\/series\/}"
         slug="${slug%%\/*}"
         slug="${slug%%\?*}"
@@ -256,7 +224,7 @@ if [[ "$link" == *'/on-demand/'* ]]; then
 
                     # set season number once per season
                     season_number_info=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].number")
-                    season_number_adjusted=$(echo $season_number_info | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
+                    # season_number_adjusted=$(echo $season_number_info | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
                     # make folder for season so content is sorted
                     mkdir "Season-$season_number_info"
                     cd "Season-$season_number_info"
@@ -264,8 +232,13 @@ if [[ "$link" == *'/on-demand/'* ]]; then
                     for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
                         vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
                         vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
-                        episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
-                        vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+                        
+                        vod_slug=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].slug")
+                        season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                        episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 1 | rev )
+
+                        vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+
 
                         echo "====================================="
                         echo $vod_name
@@ -350,8 +323,12 @@ if [[ "$link" == *'/on-demand/'* ]]; then
                 for episode_index in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
                     vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
                     vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
-                    episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
-                    vod_name="S${season_number}E${episode_number_adjusted}-${vod_name}"
+                    
+                    vod_slug=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].slug")
+                    season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                    episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 1 | rev)
+
+                    vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
                     # please remember to comment func_setup while developing
                     echo "====================================="
@@ -378,7 +355,7 @@ if [[ "$link" == *'/on-demand/'* ]]; then
             echo "assumed index $episode_index"
             echo "we obtained season number $season_index"
         
-            # downloading a single episode
+            # looping to find episode data
             episode_index_slug=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].slug" )
             if [[ "$episode_name" != "$episode_index_slug" ]]; then
                 for episode_index_loop in $(jq -r ".VOD[0].seasons[$season_index].episodes | keys | .[]" <<< "$start"); do
@@ -398,10 +375,10 @@ if [[ "$link" == *'/on-demand/'* ]]; then
             vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
             vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
 
-            # naming episode
-            season_number_adjusted=$(echo $(( season_index + 1 )) | awk '/^([0-9]+)$/ { printf("%02d", $0) }')
-            episode_number_adjusted=$(echo $(( episode_index + 1 )) | awk '/^([0-9]+)$/ { printf("%03d", $0) }')
-            vod_name="S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
+            season_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 2 | rev )
+            episode_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 1  | rev )
+    
+            vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
             echo "====================================="
             echo $vod_name
