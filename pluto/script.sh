@@ -234,8 +234,13 @@ if [[ "$link" == *'/on-demand/'* ]]; then
                         vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
                         
                         vod_slug=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].slug")
-                        season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
                         episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 1 | rev )
+                        if [[ "$episode_number_adjusted" ==  *'ptv'* ]]; then
+                            episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                            season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 3 | rev )
+                        else
+                            season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                        fi
 
                         vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
@@ -325,8 +330,13 @@ if [[ "$link" == *'/on-demand/'* ]]; then
                     vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
                     
                     vod_slug=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].slug")
-                    season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
-                    episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 1 | rev)
+                    episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 1 | rev )
+                    if [[ "$episode_number_adjusted" ==  *'ptv'* ]]; then
+                        episode_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                        season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 3 | rev )
+                    else
+                        season_number_adjusted=$(echo "$vod_slug" | rev | cut -d '-' -f 2 | rev )
+                    fi
 
                     vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
@@ -375,8 +385,14 @@ if [[ "$link" == *'/on-demand/'* ]]; then
             vod_name=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].name" | sed "s/[:/|]/-/g; s/%20/ /g; s/ $//; s/&amp;/\&/g")
             vod_url=$(echo "$start" | jq -r ".VOD[0].seasons[$season_index].episodes[$episode_index].stitched.path")
 
-            season_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 2 | rev )
             episode_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 1  | rev )
+            if [[ "$episode_number_adjusted" ==  *'ptv'* ]]; then
+                episode_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 2 | rev )
+                season_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 3 | rev )
+            else
+                season_number_adjusted=$(echo "$episode_name" | rev | cut -d '-' -f 2 | rev )
+            fi
+
     
             vod_name="${fullseriesname}-S${season_number_adjusted}E${episode_number_adjusted}-${vod_name}"
 
