@@ -21,7 +21,11 @@ we need to make an request with to the api with the following api params
 
 contentId: $FOLDERID {string}  
 token: $TOKEN {string}  
-websiteToken: "websiteToken"  
+websiteToken: $websiteToken {string}
+
+### websiteToken
+
+is obtained via files.html and seems to be numerical currently but is now dynamically obtained
 
 ### Whats important for file downloads
 

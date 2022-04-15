@@ -43,7 +43,25 @@ echo "contentId : $contentId"
 mkdir "gofolder($contentId)" || gofile_you_want_to_continue
 cd "gofolder($contentId)"
 
-url="https://api.gofile.io/getContent?contentId=${contentId}&token=${token}&websiteToken=websiteToken"
+websiteToken=$(curl 'https://gofile.io/contents/files.html' \
+  -H 'authority: gofile.io' \
+  -H 'pragma: no-cache' \
+  -H 'cache-control: no-cache' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="99", "Opera";v="85"' \
+  -H 'accept: text/html, */*; q=0.01' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H "user-agent: ${useragent}" \
+  -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-dest: empty' \
+  -H "referer: ${link}" \
+  -H 'accept-language: en-US;q=0.8,en;q=0.7' \
+  -H "cookie: accountToken=${token}" \
+  --compressed | grep 'websiteToken' | cut -d '"' -f 2)
+  
+url="https://api.gofile.io/getContent?contentId=${contentId}&token=${token}&websiteToken=${websiteToken}"
 api_file_response=$(curl -H "User-Agent: ${useragent}" "$url")
 
 for i in  $(echo "$api_file_response" | jq -r '.data.childs | keys | .[]'); do
