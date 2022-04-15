@@ -160,7 +160,7 @@ if [[ "$link" == *'/search/details/'* ]]; then
         link=$(echo "$link" | sed 's/search\/details\/channels/live-tv/')
         echo "$link"
     else
-        link=$(echo "$link" | sed 's/search/on-demand/')
+        link=$(echo "$link" | sed 's/search\/details/on-demand/')
         echo "$link"
     fi
     
