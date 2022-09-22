@@ -177,8 +177,9 @@ if [[ "$link" == *'/on-demand/'* ]]; then
     extracted_slug=$(echo "$start" | jq -r '.VOD[0].slug')
 
     if [[ ${extracted_slug} != ${slug} ]]; then
-        echo "${extracted_slug} ${slug}"
-        echo "this series might not be available"
+        echo "expected  slug: ${slug}"
+        echo "extracted slug: ${extracted_slug}"
+        echo "this series might not be available or uses DRM"
         echo "the slug from the url does not match the recieved video feed"
         exit 2
     fi
@@ -446,8 +447,9 @@ elif [[ "$link" == *'/live-tv/'* ]]; then
 
     extracted_slug=$(echo "$start" | jq -r '.VOD[0].slug')
     if [[ ${extracted_slug} != ${slug} ]]; then
-        echo "${extracted_slug} ${slug}"
-        echo "this series might not be available"
+        echo "expected  slug: ${slug}"
+        echo "extracted slug: ${extracted_slug}"
+        echo "this series might not be available or uses DRM"
         echo "the slug from the url does not match the recieved video feed"
         exit 2
     fi
