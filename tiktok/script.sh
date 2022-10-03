@@ -57,7 +57,7 @@ if [[ "$link" == *"/video/"* ]]; then
     user_name=$(echo ${link##*\@} | cut -d '/' -f 1)
     # this works since the relaxed json devides member variables by ','
     # than we can just filter for video urls and we'll select downloadAddr and fix it up
-    tiktok_video_url=$(echo "$page" | pup 'script#sigi-persisted-data text{}' |  sed 's/,/,\n/g'  | grep "webapp.tiktok.com" | grep 'downloadAddr' | cut -d '"' -f 4 | sed 's/\\u002F/\//g')
+    tiktok_video_url=$(echo "$page" | pup 'script#SIGI_STATE text{}' |  sed 's/,/,\n/g'  | grep "webapp.tiktok.com" | grep 'downloadAddr' | cut -d '"' -f 4 | sed 's/\\u002F/\//g')
 
     if [[ "$tiktok_video_url" == "" ]]; then
         echo "could not obtain video url"
@@ -87,7 +87,7 @@ if [[ "$link" == *"/@"* ]]; then
     mkdir "$username_nonconforming"
     cd "$username_nonconforming"
 
-    usercontent_list=$(echo "$page" | pup 'script#sigi-persisted-data text{}' | sed "s/window\['SIGI_STATE'\]=//g" | jq '.ItemList."user-post"')
+    usercontent_list=$(echo "$page" | pup 'script#SIGI_STATE text{}' | sed "s/window\['SIGI_STATE'\]=//g" | jq '.ItemList."user-post"')
 
     # echo "$usercontent_list" > videolist.json
 
