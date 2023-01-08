@@ -77,7 +77,7 @@ for i in  $(echo "$api_file_response" | jq -r '.data.childs | keys | .[]'); do
     curl -H "User-Agent: ${useragent}" \
     -H 'referer: https://gofile.io/' \
     --cookie "accountToken=${token}" \
-    "$file_directLink" -o "$file_name"
+    "$file_directLink" -L -o "$file_name"
 
 done
 exit 0
