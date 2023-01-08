@@ -27,7 +27,7 @@ if [[ "$tweetInfo" != "" ]]; then
         echo "[twitter] image(s) found"
         for j in  $(echo "$tweetInfo" | jq -r '.photos | keys | .[]'); do
             contentUrl=$(echo "$tweetInfo" | jq -r ".photos[$j].url")
-            echo "contentUrl : $contentUrl"
+            echo "[twitter] contentUrl : $contentUrl"
             wget -c -q "$contentUrl"
         done 
     # VIDEOS
@@ -36,17 +36,25 @@ if [[ "$tweetInfo" != "" ]]; then
         contentType=$(echo "$tweetInfo" | jq -r '.video.contentType')
         if [[ "$contentType" == "gif" ]]; then
             src=$(echo "$tweetInfo" | jq -r ".video.variants[0].src")
-            echo "$src"
-            wget -c -q "$src"
+            echo "[twitter] $src"
+            wget -c -q --show-progress "$src"
         else
+            ((resolution=0))
             for j in  $(echo "$tweetInfo" | jq -r '.video.variants | keys | .[]'); do
                 type=$(echo "$tweetInfo" | jq -r ".video.variants[$j].type")
-                if [[ "$type" == "application/x-mpegURL" ]]; then
+                if [[ "$type" == "video/mp4" ]]; then
                     src=$(echo "$tweetInfo" | jq -r ".video.variants[$j].src")
-                    echo "$src"
-                    ffmpeg -i "$src" -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 "$tweetuser-$tweetid.mp4" 
+                    respart=$(echo "${src#*/vid/}" | cut -d '/' -f 1 )
+                    height="${respart%x*}"
+                    width="${respart#*x}"
+                    ((lresolution=$height*$width))
+                    if (($lresolution > $resolution)); then
+                        fileurl="$src"
+                        resolution="$lresolution"
+                    fi
                 fi
-            done 
+            done
+            wget -c -q --show-progress "$fileurl" -O "$tweetuser-$tweetid.mp4"
         fi
     fi 
     cd ..
