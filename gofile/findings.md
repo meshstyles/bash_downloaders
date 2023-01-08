@@ -25,7 +25,8 @@ websiteToken: $websiteToken {string}
 
 ### websiteToken
 
-is obtained via files.html and seems to be numerical currently but is now dynamically obtained
+is obtained via alljs.js and seems to be a constant number currently but it is dynamically obtained on the page itself.
+For that reason I belive it's best to also get it dynamically to reduce the chance of the script breaking if the value changes.
 
 ### Whats important for file downloads
 

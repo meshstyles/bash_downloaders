@@ -7,6 +7,7 @@ useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, 
 #cutoff
 
 gofile_verifytoken(){
+    
     cached_token=$(cat "$tokenfile" | jq -r '.token')
     token_verification_request_status=$(curl "https://api.gofile.io/getAccountDetails?token=$token" | jq '.status')
     if [[ "$token_verification_request_status" == 'ok' ]]; then
@@ -16,7 +17,7 @@ gofile_verifytoken(){
 }
 
 gofile_you_want_to_continue(){
-    echo "do you want to continue: \"yes\" "
+    echo "[Hgofile-io] do you want to continue: \"yes\" "
     read continue_gofile
 
     if [[ "$continue_gofile" != "yes" ]]; then
@@ -37,30 +38,26 @@ if [[ "$token_set" != "true" ]]; then
 fi 
 
 contentId=$(echo "${link##*\/d\/}" | cut -d '?' -f 1 | cut -d '/' -f 1)
-echo "tokens : $token"
-echo "contentId : $contentId"
+echo "[Hgofile-io] tokens : $token"
+echo "[Hgofile-io] contentId : $contentId"
 
 mkdir "gofolder($contentId)" || gofile_you_want_to_continue
 cd "gofolder($contentId)"
 
-websiteToken=$(curl 'https://gofile.io/contents/files.html' \
+# https://stackoverflow.com/questions/5080988/how-to-extract-string-following-a-pattern-with-grep-regex-or-perl
+websiteToken=$(curl 'https://gofile.io/dist/js/alljs.js' \
   -H 'authority: gofile.io' \
-  -H 'pragma: no-cache' \
-  -H 'cache-control: no-cache' \
-  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="99", "Opera";v="85"' \
-  -H 'accept: text/html, */*; q=0.01' \
-  -H 'x-requested-with: XMLHttpRequest' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'sec-ch-ua: "Not?A_Brand";v="8", "Chromium";v="108", "Microsoft Edge";v="108"' \
   -H 'sec-ch-ua-mobile: ?0' \
-  -H "user-agent: ${useragent}" \
   -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'sec-fetch-dest: script' \
+  -H 'sec-fetch-mode: no-cors' \
   -H 'sec-fetch-site: same-origin' \
-  -H 'sec-fetch-mode: cors' \
-  -H 'sec-fetch-dest: empty' \
-  -H "referer: ${link}" \
-  -H 'accept-language: en-US;q=0.8,en;q=0.7' \
-  -H "cookie: accountToken=${token}" \
-  --compressed | grep 'websiteToken' | cut -d '"' -f 2)
-  
+  -H "user-agent: ${useragent}" \
+  --compressed | grep -Po 'fetchData.websiteToken = "\K.*?(?=")')
+
 url="https://api.gofile.io/getContent?contentId=${contentId}&token=${token}&websiteToken=${websiteToken}"
 api_file_response=$(curl -H "User-Agent: ${useragent}" "$url")
 
@@ -73,8 +70,8 @@ for i in  $(echo "$api_file_response" | jq -r '.data.childs | keys | .[]'); do
     file_directLink=$(echo "$file_object" | jq -r '.link')
 
     echo "========================="
-    echo "$file_name"
-    echo "$file_directLink"
+    echo "[Hgofile-io] $file_name"
+    echo "[Hgofile-io] $file_directLink"
     echo "========================="
 
     curl -H "User-Agent: ${useragent}" \
