@@ -56,9 +56,9 @@ websiteToken=$(curl 'https://gofile.io/dist/js/alljs.js' \
   -H 'sec-fetch-mode: no-cors' \
   -H 'sec-fetch-site: same-origin' \
   -H "user-agent: ${useragent}" \
-  --compressed | grep -Po 'fetchData.websiteToken = "\K.*?(?=")')
+  --compressed | grep -Po 'fetchData.wt = "\K.*?(?=")')
 
-url="https://api.gofile.io/getContent?contentId=${contentId}&token=${token}&websiteToken=${websiteToken}"
+url="https://api.gofile.io/getContent?contentId=${contentId}&token=${token}&wt=${websiteToken}"
 api_file_response=$(curl -H "User-Agent: ${useragent}" "$url")
 
 for i in  $(echo "$api_file_response" | jq -r '.data.childs | keys | .[]'); do
