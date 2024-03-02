@@ -20,12 +20,16 @@
 
 # /v4/start
 
--   VOD Downloads
+-   VOD Downloads (maybe the correct one is included)
     -   Movie 'VOD[0].stitched.path'
--   VOD Params
+-   VOD Params (maybe the correct one is included)
     -   'stitcherParams'
 -   Token
     -   'sessionToken'
+
+## tv-show season api
+
+-   get show metadata here like stream links
 
 ## obtaining master.m3u8
 
