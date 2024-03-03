@@ -80,6 +80,7 @@ func_setup() {
 func_download_from_hls() {
 
     vod_req_url="${baseurl_hls}${vod_url}?${vod_prams}&jwt=${jwt}&masterJWTPassthrough=${JWTPassthrough}"
+    echo "$vod_req_url"
 
     master_hls=$(curl "$vod_req_url" \
         -H 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
@@ -106,14 +107,21 @@ func_download_from_hls() {
         fi
     done
 
+    if [[ "$max_res" == "0" ]]; then
+        echo "$master_hls" | grep "Blacklisted Channel Via V1 HLS"
+        if [[ "$master_hls" == *"Blacklisted Channel Via V1 HLS"* ]]; then
+            echo "channel is currently not supported"
+            exit 1
+        fi
+    fi
+
     playlist_url=$(echo "$master_hls" | grep "$max_res/playlist")
     baseurl_playlist=${vod_url%%master.m3u8*}
 
     playlist_req_url="${baseurl_hls}${baseurl_playlist}${playlist_url}"
 
-    echo "$playlist_req_url"
-
     if [[ "$link" == *'/live-tv/'* ]]; then
+        echo "$playlist_req_url"
         ffmpeg -i "${playlist_req_url}" \
             -headers 'authority: service-stitcher-ipv4.clusters.pluto.tv' \
             -headers 'sec-ch-ua-mobile: ?0' \
@@ -476,28 +484,62 @@ if [[ "$link" == *'/on-demand/'* ]]; then
     fi
 
 elif [[ "$link" == *'/live-tv/'* ]]; then
-    # this is the way on "live" content declared
-    stream_type="channelSlug"
-    echo "this is a live-playback in the channel ${slug}"
-    echo "recodings go from when you start until you end ( with crtl+c )"
-    echo "you're watching $link"
-
     slug="${link##*\/live-tv\/}"
     slug="${slug%%\/*}"
     slug="${slug%%\?*}"
 
     func_setup
 
-    extracted_slug=$(echo "$start" | jq -r '.VOD[0].slug')
-    if [[ ${extracted_slug} != ${slug} ]]; then
-        echo "expected  slug: ${slug}"
-        echo "extracted slug: ${extracted_slug}"
-        echo "this series might not be available or uses DRM"
-        echo "the slug from the url does not match the recieved video feed"
-        exit 2
-    fi
+    # this is the way on "live" content declared
+    stream_type="channelSlug"
+    echo "this is a live-playback in the channel ${slug}"
+    echo "recodings go from when you start until you end ( with crtl+c )"
+    echo "you're watching $link"
 
+    extracted_slug=$(echo "$start" | jq -r '.EPG[0].slug')
+    extracted_id=$(echo "$start" | jq -r '.EPG[0].id')
     vod_url=$(echo "$start" | jq -r '.EPG[0].stitched.path')
+    echo "live path $vod_url"
+
+    if [[ "$extracted_slug" != "$slug" ]] || [[ "$extracted_id" != "$slug" ]]; then
+        echo "expected  slug: $slug"
+        echo "extracted slug: $extracted_slug"
+        echo "extracted   id: $extracted_id"
+        echo "this series might not be available or uses DRM"
+        echo "the slug from the url does not match the recieved video feed. Waiting for server"
+
+        live=$(curl "https://service-channels.clusters.pluto.tv/v2/guide/channels?channelIds=$slug&offset=0&limit=1000&sort=number%3Aasc" \
+            -H 'authority: service-channels.clusters.pluto.tv' \
+            -H 'accept: */*' \
+            -H 'accept-language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,es;q=0.4' \
+            -H "authorization: Bearer $jwt" \
+            -H 'cache-control: no-cache' \
+            -H 'origin: https://pluto.tv' \
+            -H 'pragma: no-cache' \
+            -H 'referer: https://pluto.tv/' \
+            -H 'sec-ch-ua: "Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"' \
+            -H 'sec-ch-ua-mobile: ?0' \
+            -H 'sec-ch-ua-platform: "Linux"' \
+            -H 'sec-fetch-dest: empty' \
+            -H 'sec-fetch-mode: cors' \
+            -H 'sec-fetch-site: same-site' \
+            -H "user-agent: $useragent")
+
+        #set slug so the stream recording is named correctly
+        extracted_slug=$(echo "$live" | jq -r '.data[0].slug')
+
+        # both did appear in testing
+        vod_url=$(echo "$live" | jq -r '.data[0].stitched.path')
+        if [[ "$vod_url" == "" ]]; then
+            vod_url=$(echo "$live" | jq -r '.data[0].stitched.paths[0].path')
+        fi
+
+        echo "found $extracted_slug with stream =$vod_url="
+        if [[ "$extracted_slug" != '' ]]; then
+            slug="$extracted_slug"
+            echo "$slug"
+        fi
+    fi
 
     func_download_from_hls
 
