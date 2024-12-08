@@ -8,8 +8,6 @@ these are several downloaders written in bash
 -   gofile.io
 -   netzkino.de
 -   pluto.tv
--   tiktok
--   twitter
 
 ## how to use this
 
@@ -22,7 +20,6 @@ these are several downloaders written in bash
 For more infos consult the readme of each module if there is anything specific to note
 
 -   [pluto](./pluto/readme.md)
--   [tiktok](./tiktok/readme.md)
 
 ## how to build
 
@@ -65,8 +62,3 @@ please add dependencies here as you go
 
 -   the script is for bash so you need bash and the default tools
 -   dos2unix since some files might be formatted the wrong way
-
-## upcoming
-
--   a better readme
--   debian setup script (maybe)
