@@ -3,60 +3,44 @@
 link=$1
 useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36 OPR/83.0.4254.27"
 
-#link gofile.io/d/
+#link "gofile.io/d/"
 #cutoff
 
-gofile_verifytoken() {
-    # this api might be obsoleted
-    cached_token=$(cat "$tokenfile" | jq -r '.token')
-    token_verification_request_status=$(curl "https://api.gofile.io/getAccountDetails?token=$token" | jq '.status')
-    if [[ "$token_verification_request_status" == 'ok' ]]; then
-        token="$cached_token"
-        token_set="true"
-    fi
-}
-
-gofile_you_want_to_continue() {
-    echo "[Hgofile-io] do you want to continue: \"yes\" "
-    read continue_gofile
-
-    if [[ "$continue_gofile" != "yes" ]]; then
-        exit 0
-    fi
-}
-
-# if mkdir fails stop
-[ -d ~/.local/cache/ ] || mkdir ~/.local/cache/ || exit 1
-
-tokenfile="/home/$(whoami)/.local/cache/gofileio.token"
-[ -f "$tokenfile" ] && gofile_verifytoken
-[ -f "$tokenfile" ] || touch "$tokenfile"
-
-if [[ "$token_set" != "true" ]]; then
-    token=$(curl 'https://api.gofile.io/accounts' \
-        -H 'authority: api.gofile.io' \
-        -H 'accept: */*' \
-        -H 'accept-language: en-US,en;q=0.9' \
-        -H 'cache-control: no-cache' \
-        -H 'content-type: text/plain;charset=UTF-8' \
-        -H 'origin: https://gofile.io' \
-        -H 'pragma: no-cache' \
-        -H 'referer: https://gofile.io/' \
-        -H "user-agent: $useragent" \
-        --data-raw '{}' | jq -r '.data.token')
-    echo "{\"token\":\"$token\"}" >"$tokenfile"
-fi
-
 contentId=$(echo "${link##*\/d\/}" | cut -d '?' -f 1 | cut -d '/' -f 1)
+mkdir "gofolder($contentId)"
+cd "gofolder($contentId)"
+
+curl "https://gofile.io/d/$contentId" \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'cache-control: no-cache' \
+  -H 'pragma: no-cache' \
+  -H 'priority: u=0, i' \
+  -H 'referer: https://simpcity.cr/' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H "user-agent: $useragent" > /dev/null
+
+accountInfo=$(curl 'https://api.gofile.io/accounts' \
+  -X 'POST' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'cache-control: no-cache' \
+  -H 'content-length: 0' \
+  -H 'origin: https://gofile.io' \
+  -H 'pragma: no-cache' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://gofile.io/' \
+  -H "user-agent: $useragent")
+
+token=$(echo "$accountInfo" | jq '.data.token' -r);
+
 echo "[Hgofile-io] tokens : $token"
 echo "[Hgofile-io] contentId : $contentId"
 
-mkdir "gofolder($contentId)" || gofile_you_want_to_continue
-cd "gofolder($contentId)"
-
 # https://stackoverflow.com/questions/5080988/how-to-extract-string-following-a-pattern-with-grep-regex-or-perl
 # appdata.wt = "
-websiteToken=$(curl 'https://gofile.io/dist/js/global.js' \
+websiteToken=$(curl 'https://gofile.io/dist/js/config.js' \
+    -b "accountToken=$token" \
     -H 'authority: gofile.io' \
     -H 'accept: */*' \
     -H 'accept-language: en-US,en;q=0.9' \
@@ -64,21 +48,30 @@ websiteToken=$(curl 'https://gofile.io/dist/js/global.js' \
     -H "user-agent: ${useragent}" \
     --compressed | grep -Po 'appdata.wt = "\K.*?(?=")')
 
-echo "[Hgofile-io] websiteToken: $websiteToken"
-url="https://api.gofile.io/contents/$contentId?wt=$websiteToken"
-api_file_response=$(curl "$url" \
-    -H 'accept: */*' \
-    -H 'accept-language: en-US,en;q=0.9' \
-    -H "authorization: Bearer $token" \
-    -H 'cache-control: no-cache' \
-    -H 'origin: https://gofile.io' \
-    -H 'pragma: no-cache' \
-    -H 'referer: https://gofile.io/' \
-    -H "user-agent: $useragent")
+echo "[Hgofile-io] websiteToken : $websiteToken"
 
-echo "[Hgofile-io] API url $url"
-for search_child in $(echo "$api_file_response" | jq -r '.data.children | keys[]'); do
-    file_object=$(echo "$api_file_response" | jq '.data.children' | jq ".[\"$search_child\"]")
+fileApiUrl="https://api.gofile.io/contents/$contentId?contentFilter=&page=1&pageSize=1000&sortField=name&sortDirection=1"
+
+fileInfo=$(curl "$fileApiUrl" \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H "authorization: Bearer $token" \
+  -H 'cache-control: no-cache' \
+  -H 'origin: https://gofile.io' \
+  -H 'pragma: no-cache' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://gofile.io/' \
+  -H 'sec-ch-ua: "Not(A:Brand";v="8", "Chromium";v="144"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H "user-agent: $useragent" \
+  -H "x-website-token: $websiteToken")
+
+for search_child in $(echo "$fileInfo" | jq -r '.data.children | keys[]'); do
+    file_object=$(echo "$fileInfo" | jq '.data.children' | jq ".[\"$search_child\"]")
     echo "$file_object"
     file_name=$(echo "$file_object" | jq -r '.name')
     file_directLink=$(echo "$file_object" | jq -r '.link')
@@ -91,7 +84,5 @@ for search_child in $(echo "$api_file_response" | jq -r '.data.children | keys[]
     curl -H "User-Agent: ${useragent}" \
         -H 'referer: https://gofile.io/' \
         --cookie "accountToken=${token}" \
-        "$file_directLink" -L -o "$file_name"
-
+        "$file_directLink" -L -C - -o "$file_name"
 done
-exit 0
